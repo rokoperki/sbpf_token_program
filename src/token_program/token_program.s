@@ -109,6 +109,65 @@ find_ix_data_done:
 ; ── Instruction stubs ─────────────────────────────────────────────────
 
 transfer:
+    ldxdw r2, [r1 + NUM_ACCOUNTS]
+    jne r2, 3, err_wrong_acct_count
+
+    ldxdw r6, [r10 - 8]                             ; r6 = acct0 (src)
+    ldxdw r8, [r10 - 16]                             ; r8 = acct1 (dest)
+    ldxdw r9, [r10 - 24]                            ; r10 = acct2 (authority)
+
+    ldxb r4, [r6 + ACCT_DUP]
+    jne r4, 0xFF, err_wrong_acct_count              ;check dup
+    ldxb r4, [r6 + ACCT_IS_WRITE]
+    jne r4, 1, err_not_writable                     ;check is writable
+
+    ldxb r4, [r8 + ACCT_DUP]
+    jne r4, 0xFF, err_wrong_acct_count              ;check dup
+    ldxb r4, [r8 + ACCT_IS_WRITE]
+    jne r4, 1, err_not_writable                     ;check is writable
+
+    ldxb r4, [r9 + ACCT_DUP]
+    jne r4, 0xFF, err_wrong_acct_count              ;check dup
+    ldxb r4, [r9 + ACCT_IS_SIGNER]
+    jne r4, 1, err_not_writable                     ;check is writable
+
+    ldxdw r4, [r6 + ACCT_DLEN]
+    jne r4, TOKEN_SZ, err_wrong_acct_size           ; check token size
+
+    ldxdw r4, [r8 + ACCT_DLEN]
+    jne r4, TOKEN_SZ, err_wrong_acct_size           ; check token size
+
+    ; src.mint == dest.mint
+    mov64 r1, r6
+    add64 r1, ACCT_DATA
+    mov64 r2, r8
+    add64 r2, ACCT_DATA
+    call cmp32
+    jne r0, 0, err_mint_mismatch
+
+    ; src.authority == authority.key
+    mov64 r1, r6
+    add64 r1, ACCT_DATA
+    add64 r1, TA_AUTHORITY
+    mov64 r2, r9
+    add64 r2, ACCT_KEY
+    call cmp32
+    jne r0, 0, err_authority_mismatch
+
+    ldxdw r2, [r7 + 8]          ; transfer amount
+
+    ; src.balance >= transfer amount
+    ldxdw r3, [r6 + ACCT_DATA + TA_BALANCE]
+    jgt r2, r3, err_insufficient_balance
+
+    ldxdw r4, [r8 + ACCT_DATA + TA_BALANCE]
+    mov64 r5, r4
+    add64 r5, r2
+    jlt r5, r4, err_overflow
+
+    sub64 r3, r2
+    stxdw [r6 + ACCT_DATA + TA_BALANCE], r3   ; src.balance -= amount
+    stxdw [r8 + ACCT_DATA + TA_BALANCE], r5   ; dst.balance += amount
     mov64 r0, 0
     exit
 
@@ -159,8 +218,8 @@ init_token:
     ldxdw r2, [r1 + NUM_ACCOUNTS]
     jne r2, 2, err_wrong_acct_count
 
-    ldxdw r6, [r10 - 8]                             ; r6 = acct0 (token), kept throughout
-    ldxdw r8, [r10 - 16]                             ; r8 = acct1 (mint), kept throughout
+    ldxdw r6, [r10 - 8]                             ; r6 = acct0 (token)
+    ldxdw r8, [r10 - 16]                             ; r8 = acct1 (mint)
 
     ldxb r4, [r6 + ACCT_DUP]
     jne r4, 0xFF, err_wrong_acct_count              ; check token dup
