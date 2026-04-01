@@ -1,0 +1,38 @@
+{
+  "accounts": [
+    {
+      "key": "GJRs4FwHtemZ5ZE9x3FNvJ8TMwitKTh21yxdRPqn7v5",
+      "owner": "7kjtMNuD1pGyBkcuJCZnnF9iWRqHKkLiyKECHTHSLq45",
+      "is_signer": false,
+      "is_writable": true,
+      "executable": false,
+      "lamports": 1141440,
+      "data": [
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0
+      ]
+    },
+    {
+      "key": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+      "owner": "7kjtMNuD1pGyBkcuJCZnnF9iWRqHKkLiyKECHTHSLq45",
+      "is_signer": false,
+      "is_writable": false,
+      "executable": false,
+      "lamports": 1141440,
+      "data": [
+        59, 180, 10, 27, 53, 174, 68, 250, 182, 197, 64, 125, 20, 13, 245, 130,
+        63, 209, 147, 189, 65, 82, 20, 53, 37, 71, 8, 125, 94, 87, 32, 27,
+        0, 0, 0, 0, 0, 0, 0, 0
+      ]
+    }
+  ],
+  "program_id": "7kjtMNuD1pGyBkcuJCZnnF9iWRqHKkLiyKECHTHSLq45",
+  "instruction_data": [
+    4,
+    59, 180, 10, 27, 53, 174, 68, 250, 182, 197, 64, 125, 20, 13, 245, 130,
+    63, 209, 147, 189, 65, 82, 20, 53, 37, 71, 8, 125, 94, 87, 32, 27
+  ]
+}

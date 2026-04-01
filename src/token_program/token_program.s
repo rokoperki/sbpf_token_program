@@ -65,28 +65,24 @@
 
 .globl entrypoint
 entrypoint:
-    ; ── find ix_data by walking accounts (copy from escrow) ──
-    ldxdw r6, [r1 + 0]
+    ; ── find ix_data by walking accounts ──────────────────────
+    ldxdw r6, [r1 + 0]         ; r6 = num_accounts (loop counter)
     mov64 r7, r1
-    add64 r7, 8
+    add64 r7, 8                ; r7 = cursor (advances to each account, then ix_data)
+    mov64 r2, r10
+    sub64 r2, 8                ; r2 = moving stack ptr (r10-8, r10-16, ...)
 
 find_ix_data_loop:
     jeq   r6, 0, find_ix_data_done
-    mov64 r3, r9
-    lsh64 r3, 3
-    mov64 r2, r10
-    sub64 r2, 8
-    sub64 r2, r3
-    stxdw [r2 + 0], r7
-    add64 r9, 1
-    ldxdw r2, [r7 + ACCT_DLEN]
-    add64 r2, 10240
-    add64 r2, 7
-    mov64 r3, r2
-    and64 r3, 7
-    sub64 r2, r3
-    add64 r2, 96
-    add64 r7, r2
+    stxdw [r2 + 0], r7         ; save account base ptr to stack
+    sub64 r2, 8                ; advance stack ptr to next slot
+    ldxdw r3, [r7 + ACCT_DLEN]
+    add64 r3, 10247            ; data_len + 10240 + 7 (align8 prep, combined)
+    mov64 r4, r3
+    and64 r4, 7                ; r4 = remainder
+    sub64 r3, r4               ; r3 = align8(data_len + 10240)
+    add64 r3, 96               ; + fixed fields (88) + rent (8)
+    add64 r7, r3               ; advance cursor to next account
     sub64 r6, 1
     ja    find_ix_data_loop
 
@@ -160,6 +156,57 @@ init_mint:
     exit
 
 init_token:
+    ldxdw r2, [r1 + NUM_ACCOUNTS]
+    jne r2, 2, err_wrong_acct_count
+
+    ldxdw r6, [r10 - 8]                             ; r6 = acct0 (token), kept throughout
+    ldxdw r8, [r10 - 16]                             ; r8 = acct1 (mint), kept throughout
+
+    ldxb r4, [r6 + ACCT_DUP]
+    jne r4, 0xFF, err_wrong_acct_count              ; check token dup
+
+    ldxb r4, [r6 + ACCT_IS_WRITE]
+    jne r4, 1, err_not_writable                     ; check token writable
+
+    ldxdw r4, [r6 + ACCT_DLEN]
+    jne r4, TOKEN_SZ, err_wrong_acct_size           ; check token size
+
+    jne r3, 33, err_invalid_ix                      ; check ix data len
+
+    ldxdw r5, [r6 + ACCT_DATA + TA_MINT + 0]
+    ldxdw r4, [r6 + ACCT_DATA + TA_MINT + 8]
+    or64  r5, r4
+    ldxdw r4, [r6 + ACCT_DATA + TA_MINT + 16]
+    or64  r5, r4
+    ldxdw r4, [r6 + ACCT_DATA + TA_MINT + 24]
+    or64  r5, r4
+    jne   r5, 0, err_already_initialized            ; check not already initialized
+
+    ldxb r4, [r8 + ACCT_DUP]
+    jne r4, 0xFF, err_wrong_acct_count              ; check mint dup
+
+    ldxdw r4, [r8 + ACCT_DLEN]
+    jne r4, MINT_SZ, err_wrong_acct_size            ; check mint size
+
+    ; copy acct1.key → token.data[TA_MINT]
+    mov64 r1, r6
+    add64 r1, ACCT_DATA                             ; dst: TA_MINT=0x00 so no extra offset
+    mov64 r2, r8
+    add64 r2, ACCT_KEY                              ; src: acct1.key
+    call copy32                                     ; clobbers r1, r2, r3
+
+    ; copy ix_data[1..33] → token.data[TA_AUTHORITY]
+    mov64 r1, r6
+    add64 r1, ACCT_DATA
+    add64 r1, TA_AUTHORITY
+    mov64 r2, r7
+    add64 r2, 9
+    call copy32                                     ; clobbers r1, r2, r3
+
+    ; zero TA_BALANCE
+    mov64 r3, 0
+    stxdw [r6 + ACCT_DATA + TA_BALANCE], r3
+
     mov64 r0, 0
     exit
 
