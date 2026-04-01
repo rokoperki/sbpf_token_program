@@ -129,7 +129,7 @@ transfer:
     ldxb r4, [r9 + ACCT_DUP]
     jne r4, 0xFF, err_wrong_acct_count              ;check dup
     ldxb r4, [r9 + ACCT_IS_SIGNER]
-    jne r4, 1, err_not_writable                     ;check is writable
+    jne r4, 1, err_not_signer                       ;check is signer
 
     ldxdw r4, [r6 + ACCT_DLEN]
     jne r4, TOKEN_SZ, err_wrong_acct_size           ; check token size
@@ -172,6 +172,58 @@ transfer:
     exit
 
 mint_to:
+    ldxdw r2, [r1 + NUM_ACCOUNTS]
+    jne r2, 2, err_wrong_acct_count
+
+    ldxdw r6, [r10 - 8]                             ; r6 = acct0 (mint)
+    ldxdw r8, [r10 - 16]                             ; r8 = acct1 (token)
+
+    ldxb r4, [r6 + ACCT_DUP]
+    jne r4, 0xFF, err_wrong_acct_count              ;check dup
+    ldxb r4, [r6 + ACCT_IS_WRITE]
+    jne r4, 1, err_not_writable                     ;check is writable
+    ldxb r4, [r6 + ACCT_IS_SIGNER]
+    jne r4, 1, err_not_signer                       ;check is signer
+
+    ldxb r4, [r8 + ACCT_DUP]
+    jne r4, 0xFF, err_wrong_acct_count              ;check dup
+    ldxb r4, [r8 + ACCT_IS_WRITE]
+    jne r4, 1, err_not_writable                     ;check is writable
+
+    ldxdw r4, [r6 + ACCT_DLEN]
+    jne r4, MINT_SZ, err_wrong_acct_size           ; check mint size
+
+    ldxdw r4, [r8 + ACCT_DLEN]
+    jne r4, TOKEN_SZ, err_wrong_acct_size           ; check token size
+
+    jne r3, 9, err_invalid_ix                       ;check ix data len
+
+    ;mint.key == token.mint
+    mov64 r1, r6
+    add64 r1, ACCT_KEY
+    mov64 r2, r8
+    add64 r2, ACCT_DATA
+    add64 r2, TA_MINT
+    call cmp32
+    jne r0, 0, err_mint_mismatch
+
+    ldxdw r2, [r7 + 9]
+    jeq r2, 0, err_zero_amount
+
+    ;token.balance += amount
+    ldxdw r3, [r8 + ACCT_DATA + TA_BALANCE]
+    mov64 r4, r3
+    add64 r4, r2
+    jlt r4, r3, err_overflow
+    stxdw [r8 + ACCT_DATA + TA_BALANCE], r4
+
+    ;mint.total_minted += amount
+    ldxdw r3, [r6 + ACCT_DATA + MA_TOTAL_MINTED]
+    mov64 r4, r3
+    add64 r4, r2
+    jlt r4, r3, err_overflow
+    stxdw [r6 + ACCT_DATA + MA_TOTAL_MINTED], r4
+
     mov64 r0, 0
     exit
 
