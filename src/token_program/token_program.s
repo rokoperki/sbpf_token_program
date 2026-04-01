@@ -129,6 +129,33 @@ burn:
     exit
 
 init_mint:
+    ldxdw r2, [r1 + NUM_ACCOUNTS]
+    jne r2, 1, err_wrong_acct_count
+
+    ldxdw r2, [r10 - 8]                             ;mint acc (acct0)
+    ldxb r4, [r2 + ACCT_IS_SIGNER]
+    jne r4, 1, err_not_signer                       ;check is signer
+
+    ldxb r4, [r2 + ACCT_DUP]
+    jne r4, 0xFF, err_wrong_acct_count              ;check dup
+
+    ldxb r4, [r2 + ACCT_IS_WRITE]
+    jne r4, 1, err_not_writable                     ;check is writable
+
+    ldxdw r4, [r2 + ACCT_DLEN]
+    jne r4, MINT_SZ, err_wrong_acct_size            ;check acct size
+
+    jne r3, 33, err_invalid_ix                       ;check ix data len
+
+    ldxdw r4, [r2 + ACCT_DATA + MA_TOTAL_MINTED]
+    jne r4, 0, err_already_initialized               ;check already initialized
+
+    mov64 r1, r2
+    add64 r1, ACCT_DATA
+    mov64 r2, r7
+    add64 r2, 9
+    call copy32     ;copy authority to mint acc
+
     mov64 r0, 0
     exit
 
